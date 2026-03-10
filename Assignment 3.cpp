@@ -1,21 +1,22 @@
-// Assignment 3.cpp : This file contains the 'main' function. Program execution begins and ends there.
-
 #include <iostream>
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <map>
+#include <iomanip>
 using namespace std;
 
+// Create a class for nodes to store letter and frequency
 class huffNode
 {
 public:
-    int freq;
     char letter;
+    int freq;
 
     huffNode* left;
     huffNode* right;
 
-    huffNode(int freq, char letter)
+    huffNode(char letter, int freq)
     {
         this->freq = freq;
         this->letter = letter;
@@ -24,6 +25,8 @@ public:
     }
 };
 
+// Create a minHeap class, which will be used to
+// grab the lowest frequency count nodes when building our Huffman tree.
 class minHeap {
 public:
     int maxSize = 100, elements = 0;
@@ -35,11 +38,13 @@ public:
             this->pq[i] = NULL;
     }
 
+    // Return heap size
     int size()
     {
         return elements;
     }
 
+    // Insert a new node if the heap is not full
     void insert_node(huffNode* tmpnode)
     {
         if (size() < maxSize)
@@ -72,6 +77,7 @@ public:
         }
     }
 
+    // Delete and return a node
     huffNode* delete_node()
     {
         if (size() > 0)
@@ -93,19 +99,20 @@ public:
         return NULL;
     }
 
+    // Properly place each inserted node into the heap
     void heapify(int idx)
     {
         int parent = idx;
         int leftChild = idx * 2 + 1;
         int rightChild = idx * 2 + 2;
 
-        if (leftChild < size() and pq[leftChild]->freq < pq[idx]->freq)
+        if (leftChild < size() and pq[leftChild]->freq < pq[parent]->freq)
         {
             parent = leftChild;
         }
 
         // If right child is less than left child, it will "override" the value stored in parent from left child
-        if (rightChild < size() and pq[rightChild]->freq < pq[idx]->freq)
+        if (rightChild < size() and pq[rightChild]->freq < pq[parent]->freq)
         {
             parent = rightChild;
         }
@@ -122,42 +129,110 @@ public:
     }
 };
 
+// Recursively search through our Huffman tree
+void find_codes(huffNode* currentNode, string currentCode, map<char, pair<int, string>>& letterMap)
+{
+    // Return if we get to the end of the tree, i.e. if we get to a null node
+    if (currentNode == NULL)
+    {
+        return;
+    }
+
+    // If the node isn't NULL, but both of it's children are, then we know we've found a leaf, i.e. a letter
+    if (currentNode->left == NULL and currentNode->right == NULL)
+    {
+        letterMap[currentNode->letter] = make_pair(currentNode->freq, currentCode);
+    }
+
+    find_codes(currentNode->left, currentCode + "0", letterMap);
+    find_codes(currentNode->right, currentCode + "1", letterMap);
+}
+
+
 int main()
 {
-    minHeap* min_heap = new minHeap();
+    // Create a minHeap class instance called heap
+    minHeap heap;
 
-    int num[14] = { 10, 30, 20, 35, 50, 40, 45, 60, 75, 80, 95, 70, 98, 92 };
-    int heap_size = 14;
+    // Add nodes for all letters, allong with their frequency counts
+    heap.insert_node(new huffNode('A', 77));
+    heap.insert_node(new huffNode('B', 17));
+    heap.insert_node(new huffNode('C', 32));
+    heap.insert_node(new huffNode('D', 42));
+    heap.insert_node(new huffNode('E', 120));
+    heap.insert_node(new huffNode('F', 24));
+    heap.insert_node(new huffNode('G', 17));
+    heap.insert_node(new huffNode('H', 50));
+    heap.insert_node(new huffNode('I', 76));
+    heap.insert_node(new huffNode('J', 4));
+    heap.insert_node(new huffNode('K', 7));
+    heap.insert_node(new huffNode('L', 42));
+    heap.insert_node(new huffNode('M', 24));
+    heap.insert_node(new huffNode('N', 67));
+    heap.insert_node(new huffNode('O', 67));
+    heap.insert_node(new huffNode('P', 20));
+    heap.insert_node(new huffNode('Q', 5));
+    heap.insert_node(new huffNode('R', 59));
+    heap.insert_node(new huffNode('S', 67));
+    heap.insert_node(new huffNode('T', 85));
+    heap.insert_node(new huffNode('U', 37));
+    heap.insert_node(new huffNode('V', 12));
+    heap.insert_node(new huffNode('W', 22));
+    heap.insert_node(new huffNode('X', 4));
+    heap.insert_node(new huffNode('Y', 22));
+    heap.insert_node(new huffNode('Z', 2));
 
-    // Adding minheap values
-    for (int i = 0; i < heap_size; i++)
+    // Create the Huffman tree
+    while (heap.size() > 1)
     {
-        min_heap->insert_node(new Node(num[i]));
+        // Delete the two smallest nodes, by frequency. Store them in huffNode pointers.
+        huffNode* left = heap.delete_node();
+        huffNode* right = heap.delete_node();
 
+        // Create a new node, which will be the parent of the two smallest nodes, forming a subtree.
+        // This node will have '#' for it's letter value, indicating it is not a letter/not part of our Huffman code
+        huffNode* parent = new huffNode('#', left->freq + right->freq);
+
+        // Set the removed nodes to be children of the new parent node.
+        parent->left = left;
+        parent->right = right;
+
+        // Add our new node to the heap
+        heap.insert_node(parent);
     }
 
-    // Printing minheap values
-    for (int i = 0; i < heap_size; i++)
+    // The last node left will be the root of our Huffman tree. 
+    // By accessing it's decnedants (it's children, it's children's children, etc.) we can access the nodes of all of our letters.
+    huffNode* huffRoot = heap.delete_node();
+
+    // Create an empty map to store the letters and their codes
+    map<char, pair<int, string>> letterCodes = {};
+
+    // Use find_codes to fill the letterCodes map
+    find_codes(huffRoot, "", letterCodes);
+
+    // Print table header
+    cout << left
+        << setw(10) << "Letter"
+        << setw(12) << "Frequency"
+        << setw(12) << "Code"
+        << setw(10) << "Length"
+        << setw(12) << "Freq X Len"
+        << endl;
+
+    cout << "______   __________   ______     ________  ____________" << endl;
+
+    // Print each letter and it's associated details
+    for (auto& p : letterCodes)
     {
-        cout << min_heap->pq[i]->ID << ',';
+        cout << left
+            << setw(10) << p.first
+            << setw(12) << p.second.first
+            << setw(12) << p.second.second
+            << setw(10) << p.second.second.length()
+            << setw(12) << p.second.first * p.second.second.length()
+            << endl;
     }
-
-    cout << endl;
-
-    min_heap->insert_node(new Node(25));
-
-    for (int i = 0; i < min_heap->size() + 1; i++)
-    {
-        cout << min_heap->pq[i]->ID << ',';
-    }
-
-    cout << endl;
-
-    // Get the id value of the deleted node
-    int key = min_heap->delete_node()->ID; 
-    cout << key;
-
-
 
     return 0;
 }
